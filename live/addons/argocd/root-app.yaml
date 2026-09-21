@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/SiliasOdion809/Project-Forge.git
     targetRevision: main
-    path: live/addons/argocd/apps
+    path: live/addons/apps
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

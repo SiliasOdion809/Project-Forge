@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#deployment-v1-apps
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-api
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: sample-api
+          env:
+            - name: ENVIRONMENT
+              value: "dev"

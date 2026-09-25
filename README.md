@@ -27,7 +27,7 @@ Most infrastructure portfolios stop at "I can deploy an app to Kubernetes." Forg
 ## Roadmap
 
 - [x] **Phase 1 — Foundation**: VPC, EKS cluster, node group, IRSA-ready OIDC provider (see below)
-- [ ] **Phase 2 — GitOps delivery**: ArgoCD (App-of-Apps pattern), ApplicationSets for dev→staging→prod promotion
+- [x] **Phase 2 — GitOps delivery**: ArgoCD (App-of-Apps pattern), ApplicationSets for dev→staging→prod promotion
 - [ ] **Phase 3 — Self-service layer**: Backstage portal, golden-path service template, auto-populated service catalog
 - [ ] **Phase 4 — Security**: OPA/Kyverno admission policies, image signing (Cosign), SBOM generation (Syft), vulnerability gating (Trivy)
 - [ ] **Phase 5 — Observability**: OpenTelemetry tracing, Prometheus/Grafana, Loki, SLOs with error-budget-based alerting
@@ -126,6 +126,72 @@ kubectl get nodes
 **Note:** EKS cluster creation takes ~13–15 minutes; node group creation is typically 2–3 minutes but can take longer depending on account-level EC2 service quotas.
 
 ---
+
+## Phase 2: GitOps Delivery — ArgoCD & Environment Promotion
+
+This phase installs ArgoCD and demonstrates the App-of-Apps + ApplicationSet pattern with a real deployed service — not a placeholder.
+
+### What's provisioned
+
+| Component | Details |
+|---|---|
+| **Container registry** | ECR repository (`project-forge/sample-api`), Terraform-managed — immutable tags, scan-on-push, 10-image lifecycle policy |
+| **GitOps controller** | ArgoCD, installed via official manifests, App-of-Apps root (`root-app`) watching `live/addons/apps/` |
+| **Sample service** | `sample-api` — a FastAPI backend with `/health`, `/`, `/api/v1/items`, built as a multi-stage Docker image, pushed to the ECR repo above |
+| **Environment promotion** | Kustomize base + `dev`/`staging`/`prod` overlays (namespace-per-environment, replica counts 1/2/3), driven by a single `ApplicationSet` (list generator) — one commit updates all three environments automatically |
+
+### Architecture
+
+```
+Git push → ArgoCD detects change → auto-sync → cluster reconciles
+                                          │
+                      ┌───────────────────┼───────────────────┐
+                      ▼                   ▼                   ▼
+                 dev namespace     staging namespace      prod namespace
+                 replicas: 1       replicas: 2            replicas: 3
+                 sample-api:v0.1.1 sample-api:v0.1.1     sample-api:v0.1.1
+```
+
+One image, one Git commit, three environments — that's the actual point of this pattern: promotion means bumping a tag in Git, not redeploying by hand.
+
+### Design decisions & tradeoffs
+
+- **Immutable ECR tags** — once pushed, a tag can never be overwritten, preventing silent image swaps. This is why promotion happens via explicit version bumps (`v0.1.0` → `v0.1.1`) in the Kustomize base, not a floating `latest` tag.
+
+- **Multi-stage Docker build, non-root user** — keeps build tooling out of the runtime image and avoids running the container as root, a baseline practice that later becomes enforceable policy in Phase 4 (Kyverno).
+
+### Incidents & what they taught
+
+Two real production-grade failures happened building this phase, both left in as-is because they're more instructive than a clean run:
+
+**1. Cross-platform image mismatch.** Images built on Apple Silicon (`arm64`) failed to run on EKS's `amd64` node group — `ImagePullBackOff` with "no match for platform in manifest." Fixed with `docker buildx build --platform linux/amd64 --push`. A common, real gotcha for anyone developing on Apple Silicon and deploying to x86 cloud infrastructure.
+
+**2. CRD deletion cascade.** The ApplicationSet CRD initially failed to install via plain `kubectl apply` (metadata annotation exceeded Kubernetes' 256KB limit). The first fix attempt, `kubectl replace --force`, deletes-then-recreates rather than patching — this triggered a cascading delete of the entire ArgoCD stack and a stuck-finalizer deadlock (the CRD couldn't finish deleting because the controller that processes its finalizers had itself just been deleted). Recovered by reinstalling via `kubectl apply --server-side`, which is the correct way to apply large CRDs without triggering delete-then-recreate semantics.
+
+### Reproducing this phase
+
+```bash
+# 1. Provision the ECR repository
+cd live/ecr
+terraform init && terraform apply
+
+# 2. Build and push the sample-api image (must target linux/amd64 — see incident notes above)
+cd ../addons/apps/sample-api
+docker buildx build --platform linux/amd64 \
+  -t <account-id>.dkr.ecr.us-east-1.amazonaws.com/project-forge/sample-api:v0.1.1 \
+  --push .
+
+# 3. Install ArgoCD (server-side apply — required for the ApplicationSet CRD, see incident notes)
+kubectl create namespace argocd
+kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# 4. Apply the App-of-Apps root — this auto-syncs everything else,
+#    including the sample-api ApplicationSet, with no further manual kubectl needed
+kubectl apply -f live/addons/argocd/root-app.yaml
+```
+
+---
+
 
 ## Author
 

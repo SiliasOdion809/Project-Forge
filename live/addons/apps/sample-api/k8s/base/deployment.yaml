@@ -16,14 +16,14 @@ spec:
     spec:
       containers:
         - name: sample-api
-          image: 791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/sample-api:v0.1.0
+          image: 791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/sample-api:v0.1.1
           ports:
             - containerPort: 8000
           env:
             - name: ENVIRONMENT
               value: "base"
             - name: APP_VERSION
-              value: "0.1.0"
+              value: "0.1.1"
           resources:
             requests:
               cpu: 50m

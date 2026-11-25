@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${{ values.serviceName }}
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: ${{ values.serviceName }}
+          env:
+            - name: ENVIRONMENT
+              value: staging

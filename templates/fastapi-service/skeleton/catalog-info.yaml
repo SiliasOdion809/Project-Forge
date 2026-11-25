@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.serviceName }}
+  description: ${{ values.description }}
+  tags:
+    - python
+    - fastapi
+    - gitops
+    - golden-path
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}
+  system: project-forge

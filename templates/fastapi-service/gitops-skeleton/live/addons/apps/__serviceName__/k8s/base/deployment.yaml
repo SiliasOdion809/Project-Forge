@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${{ values.serviceName }}
+  labels:
+    app: ${{ values.serviceName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${{ values.serviceName }}
+  template:
+    metadata:
+      labels:
+        app: ${{ values.serviceName }}
+    spec:
+      containers:
+        - name: ${{ values.serviceName }}
+          image: 791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/${{ values.serviceName }}:v0.1.0
+          ports:
+            - containerPort: ${{ values.port }}
+          env:
+            - name: ENVIRONMENT
+              value: dev
+            - name: APP_VERSION
+              value: v0.1.0
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: ${{ values.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: ${{ values.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 20

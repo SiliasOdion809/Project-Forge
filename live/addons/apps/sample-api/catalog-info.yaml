@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sample-api
+  description: FastAPI backend demonstrating GitOps-driven dev/staging/prod promotion
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - python
+    - fastapi
+    - gitops
+spec:
+  type: service
+  lifecycle: experimental
+  owner: guests
+  system: project-forge

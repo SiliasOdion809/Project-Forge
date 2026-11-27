@@ -1,0 +1,95 @@
+name: build-sample-api
+
+on:
+  pull_request:
+    paths:
+      - "live/addons/apps/sample-api/**"
+      - ".github/workflows/build-sample-api.yml"
+  push:
+    branches: [main]
+    paths:
+      - "live/addons/apps/sample-api/**"
+      - ".github/workflows/build-sample-api.yml"
+
+permissions:
+  contents: read
+
+env:
+  APP_DIR: live/addons/apps/sample-api
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: project-forge/sample-api
+  LOCAL_IMAGE: sample-api:ci
+
+jobs:
+  build-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # needed only to assume the AWS role on main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read release tag from deployment.yaml
+        id: tag
+        run: |
+          TAG="$(grep -E 'image:.*sample-api:' "$APP_DIR/k8s/base/deployment.yaml" | head -n1 | sed -E 's/.*:([^:[:space:]]+)[[:space:]]*$/\1/')"
+          if [ -z "$TAG" ]; then echo "Could not read image tag"; exit 1; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image (local only, not pushed yet)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ env.APP_DIR }}
+          load: true
+          push: false
+          tags: ${{ env.LOCAL_IMAGE }}
+
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.LOCAL_IMAGE }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@dfcb83b97731532d72be422cbc51ee64adb6fd56 # v0.24.4
+        with:
+          image: ${{ env.LOCAL_IMAGE }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          artifact-name: sample-api-sbom-${{ steps.tag.outputs.tag }}.spdx.json
+
+      - name: Configure AWS credentials (OIDC)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: arn:aws:iam::791316000644:role/project-forge-ci
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@7290e214a610b32bc0eef81748948b6d466a8783 # v2.2.0
+
+      - name: Push to ECR if this tag is new
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists in ECR (immutable). Nothing to push."
+          else
+            docker tag "$LOCAL_IMAGE" "$REGISTRY/$ECR_REPOSITORY:$TAG"
+            docker push "$REGISTRY/$ECR_REPOSITORY:$TAG"
+            echo "Pushed $REGISTRY/$ECR_REPOSITORY:$TAG"
+          fi

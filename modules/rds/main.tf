@@ -39,6 +39,7 @@ resource "random_password" "db" {
 
 resource "aws_secretsmanager_secret" "db" {
   name = "${var.project_name}/backstage/db-credentials"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db" {

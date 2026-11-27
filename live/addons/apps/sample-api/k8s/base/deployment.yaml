@@ -20,7 +20,7 @@ spec:
         runAsGroup: 10001
       containers:
         - name: sample-api
-          image: 791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/sample-api:v0.1.1
+          image: 791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/sample-api:v0.1.2
           ports:
             - containerPort: 8000
           env:

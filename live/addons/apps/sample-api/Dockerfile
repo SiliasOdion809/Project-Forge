@@ -11,6 +11,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 # Run as non-root — a small but real security practice
 RUN useradd --create-home appuser
 COPY --from=builder /install /usr/local/lib/python3.12/site-packages

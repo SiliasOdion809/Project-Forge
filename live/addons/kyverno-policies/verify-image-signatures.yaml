@@ -3,10 +3,13 @@ kind: ImageValidatingPolicy
 metadata:
   name: verify-image-signatures
 spec:
-  validationActions: [Audit]
-  failurePolicy: Ignore
+  validationActions: [Deny]
+  failurePolicy: Fail
   webhookConfiguration:
     timeoutSeconds: 15
+  autogen:
+    podControllers:
+      controllers: []
   matchConstraints:
     resourceRules:
       - apiGroups: ['']
@@ -14,7 +17,7 @@ spec:
         operations: ['CREATE', 'UPDATE']
         resources: ['pods']
   matchImageReferences:
-    - glob: '791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/*'
+    - glob: '791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/sample-api:*'
   credentials:
     providers: [amazon]
   attestors:

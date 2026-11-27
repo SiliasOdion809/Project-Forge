@@ -93,3 +93,28 @@ jobs:
             docker push "$REGISTRY/$ECR_REPOSITORY:$TAG"
             echo "Pushed $REGISTRY/$ECR_REPOSITORY:$TAG"
           fi
+
+      - name: Install Cosign
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: sigstore/cosign-installer@881c63bd87e38389154debd8331404ce7ca8a3ab # v4.1.4
+        with:
+          cosign-release: v3.1.6
+
+      - name: Sign image with Cosign (keyless)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          IDENTITY: ${{ github.server_url }}/${{ github.workflow_ref }}
+        run: |
+          DIGEST="$(aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$TAG" --query 'imageDetails[0].imageDigest' --output text)"
+          REF="$REGISTRY/$ECR_REPOSITORY@$DIGEST"
+          echo "Image: $REF"
+          if cosign verify "$REF" \
+              --certificate-identity "$IDENTITY" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1; then
+            echo "Already signed by this workflow. Nothing to do."
+          else
+            cosign sign --yes "$REF"
+            echo "Signed $REF"
+          fi

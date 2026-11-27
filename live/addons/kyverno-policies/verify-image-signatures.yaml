@@ -1,0 +1,32 @@
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: verify-image-signatures
+spec:
+  validationActions: [Audit]
+  failurePolicy: Ignore
+  webhookConfiguration:
+    timeoutSeconds: 15
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ['']
+        apiVersions: ['v1']
+        operations: ['CREATE', 'UPDATE']
+        resources: ['pods']
+  matchImageReferences:
+    - glob: '791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/*'
+  credentials:
+    providers: [amazon]
+  attestors:
+    - name: cosign
+      cosign:
+        keyless:
+          identities:
+            - issuer: 'https://token.actions.githubusercontent.com'
+              subject: 'https://github.com/SiliasOdion809/Project-Forge/.github/workflows/build-sample-api.yml@refs/heads/main'
+        ctlog:
+          url: 'https://rekor.sigstore.dev'
+  validations:
+    - expression: >-
+        images.containers.map(image, verifyImageSignatures(image, [attestors.cosign])).all(e, e > 0)
+      message: 'Image must be signed by the Project-Forge CI workflow on main.'

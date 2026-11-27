@@ -28,6 +28,7 @@ MODULES=(
   "live/bastion"
   "live/rds"
   "live/ecr"
+  "live/github-oidc"
   "live/addons"
   "live/cluster"
   "live/network"

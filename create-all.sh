@@ -36,6 +36,7 @@ MODULES=(
   "live/network"
   "live/cluster"
   "live/ecr"
+  "live/github-oidc"
   "live/rds"
   "live/bastion"
 )

@@ -45,7 +45,9 @@ Project-Forge/
 │   ├── cluster/          # Root module: EKS cluster + node group
 │   ├── ecr/               # Root module: ECR repositories (sample-api, greeting-service)
 │   ├── addons/            # ArgoCD, ingress, cert-manager, app-of-apps + ApplicationSets
-│   └── rds/                # (Phase 3) RDS Postgres for Backstage, reached via SSM bastion
+│   └── rds/               # (Phase 3) RDS Postgres for Backstage, reached via SSM bastion
+│   └── bastion/           # SSM-only bastion host for the RDS tunnel 
+|.   ──                          
 ├── modules/
 │   ├── vpc/              # Reusable VPC module
 │   ├── eks/               # Reusable EKS module

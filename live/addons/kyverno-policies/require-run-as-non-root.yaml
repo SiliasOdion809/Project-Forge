@@ -8,7 +8,7 @@ metadata:
     policies.kyverno.io/severity: high
 spec:
   validationActions:
-    - Audit
+    - Deny
   matchConstraints:
     resourceRules:
       - apiGroups: ['']

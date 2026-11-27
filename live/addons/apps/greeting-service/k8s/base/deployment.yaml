@@ -14,6 +14,10 @@ spec:
       labels:
         app: greeting-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
       containers:
         - name: greeting-service
           image: 791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/greeting-service:v0.1.0

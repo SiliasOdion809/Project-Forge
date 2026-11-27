@@ -14,6 +14,10 @@ spec:
       labels:
         app: sample-api
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
       containers:
         - name: sample-api
           image: 791316000644.dkr.ecr.us-east-1.amazonaws.com/project-forge/sample-api:v0.1.1

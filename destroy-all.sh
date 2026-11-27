@@ -30,6 +30,7 @@ MODULES=(
   "live/ecr"
   "live/github-oidc"
   "live/addons"
+  "live/kyverno-irsa"
   "live/cluster"
   "live/network"
 )

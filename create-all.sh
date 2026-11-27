@@ -35,6 +35,7 @@ done
 MODULES=(
   "live/network"
   "live/cluster"
+  "live/kyverno-irsa"
   "live/ecr"
   "live/github-oidc"
   "live/rds"

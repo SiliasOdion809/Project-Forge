@@ -27,7 +27,7 @@ data "aws_iam_policy_document" "trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:SiliasOdion809/*:ref:refs/heads/main"]
+      values   = ["repo:SiliasOdion809@191795580/*:ref:refs/heads/main"]
     }
   }
 }

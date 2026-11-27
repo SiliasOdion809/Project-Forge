@@ -11,3 +11,4 @@ override.tf.json
 *_override.tf.json
 .terraform.lock.hcl
 *.tfplan
+.DS_Store

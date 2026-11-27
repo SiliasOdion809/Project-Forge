@@ -15,6 +15,10 @@ spec:
       values: |
         admissionController:
           replicas: 1
+          rbac:
+            serviceAccount:
+              annotations:
+                eks.amazonaws.com/role-arn: arn:aws:iam::791316000644:role/project-forge-kyverno-ecr
         backgroundController:
           replicas: 1
         cleanupController:
